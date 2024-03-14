@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: true 
       - run: sudo apt-get update && sudo apt-get install libboost-test-dev -y
       - run: cmake . -DVERSION_PATCH=${{ github.run_number }} -DWITH_BOOST_TEST=ON
       - run: cmake --build .
