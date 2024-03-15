@@ -7,14 +7,14 @@ option(WITH_BOOST_TEST "Whether to build Boost test" ON)
 
 configure_file(version.h.in version.h)
 
-add_executable(hello main.cpp)
+add_executable(helloworld_cli main.cpp)
 add_library(hello_lib lib.cpp)
 
-set_target_properties(hello hello_lib PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+set_target_properties(helloworld_cli hello_lib PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 target_include_directories(hello_lib PRIVATE ${CMAKE_BINARY_DIR})
 
-target_link_libraries(hello PRIVATE hello_lib)
+target_link_libraries(helloworld_cli PRIVATE hello_lib)
 
 if(WITH_BOOST_TEST)
     find_package(Boost COMPONENTS unit_test_framework REQUIRED)
@@ -37,14 +37,14 @@ if(WITH_BOOST_TEST)
 endif()
 
 if (MSVC)
-    target_compile_options(hello PRIVATE /W4)
+    target_compile_options(helloworld_cli PRIVATE /W4)
     target_compile_options(hello_lib PRIVATE /W4)
 
     if(WITH_BOOST_TEST)
         target_compile_options(test_version PRIVATE /W4)
     endif()
 else ()
-    target_compile_options(hello PRIVATE -Wall -Wextra -pedantic -Werror)
+    target_compile_options(helloworld_cli PRIVATE -Wall -Wextra -pedantic -Werror)
     target_compile_options(hello_lib PRIVATE -Wall -Wextra -pedantic -Werror)    
     
     if(WITH_BOOST_TEST)
@@ -52,7 +52,7 @@ else ()
     endif()
 endif()
 
-install(TARGETS hello RUNTIME DESTINATION bin)
+install(TARGETS helloworld_cli RUNTIME DESTINATION bin)
 
 set(CPACK_GENERATOR DEB)
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
