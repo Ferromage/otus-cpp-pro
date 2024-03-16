@@ -1,3 +1,0 @@
-#pragma once
-
-#cmakedefine VERSION_PATCH @PROJECT_VERSION_PATCH@
