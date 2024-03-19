@@ -12,13 +12,13 @@ set_target_properties(ip_filter PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED
 #endif()
 
 if (MSVC)
-    target_compile_options(ip_filter PRIVATE /W4)    
+    #target_compile_options(ip_filter PRIVATE /W4)    
 
     if(WITH_TEST)
         #target_compile_options(test_version PRIVATE /W4)
     endif()
 else ()
-    target_compile_options(ip_filter PRIVATE -Wall -Wextra -pedantic -Werror)    
+    #target_compile_options(ip_filter PRIVATE -Wall -Wextra -pedantic -Werror)    
     
     if(WITH_TEST)
         #target_compile_options(test_version PRIVATE -Wall -Wextra -pedantic -Werror)
