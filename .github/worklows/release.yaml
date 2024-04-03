@@ -3,7 +3,7 @@ name: allocator
 on:
   push:
     branches:
-      - homework3      
+      - homework3    
 
 jobs:
   build:
