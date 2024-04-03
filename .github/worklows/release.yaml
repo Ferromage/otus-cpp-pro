@@ -1,9 +1,7 @@
 name: allocator
 
 on:
-  push:
-    branches:
-      - homework3    
+  push:  
 
 jobs:
   build:
