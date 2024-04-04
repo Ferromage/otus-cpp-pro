@@ -3,13 +3,14 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <array>
 
 namespace util {
 
-using data = std::vector<std::string>;
+using ip_addr = std::array<int, 4>;
 
-void printData(const data& d, std::ostream& oss);
-data split(const std::string &str, char d);
-void reverse_sort(std::vector<data>& d);
+void printData(const ip_addr& d, std::ostream& oss);
+ip_addr getIpAddr(const std::string &str);
+void reverse_sort(std::vector<ip_addr>& d);
 
 }

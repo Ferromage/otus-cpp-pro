@@ -3,39 +3,44 @@
 
 namespace util {
 
-void printData(const data& d, std::ostream& oss) {
+void printData(const ip_addr& ip, std::ostream& oss) {
     bool isFirst = true;
-    for (auto ip_part = d.cbegin(); ip_part != d.cend(); ++ip_part) {
+    for (auto octet : ip) {
         if (!isFirst) {
             oss << ".";
         }
-        oss << *ip_part;
+        oss << octet;
         isFirst = false;
     }
 }
 
-data split(const std::string &str, char d) {
-    data r;
+ip_addr getIpAddr(const std::string &str) {
+    ip_addr r;
 
-    std::string::size_type start = 0;
-    std::string::size_type stop = str.find_first_of(d);
-    while (stop != std::string::npos) {
-        r.push_back(str.substr(start, stop - start));
+    try {
+        std::string::size_type start = 0;
+        std::string::size_type stop = str.find_first_of('.');
+        int i = 0;
+        while (stop != std::string::npos) {
+            r[i++] = std::stoi(str.substr(start, stop - start));
 
-        start = stop + 1;
-        stop = str.find_first_of(d, start);
+            start = stop + 1;
+            stop = str.find_first_of('.', start);
+        }
+
+        r[i] = std::stoi(str.substr(start));
+    } catch (...) {
+        r.fill(0);
     }
-
-    r.push_back(str.substr(start));
 
     return r;
 }
 
-void reverse_sort(std::vector<data>& d) {
+void reverse_sort(std::vector<ip_addr>& d) {
     std::sort(d.begin(), d.end(), [](const auto& lhs, const auto& rhs) -> bool {
         for (int i = 0; i < (int)lhs.size(); i++) {
-            const auto numL = std::stoi(lhs.at(i));
-            const auto numR = std::stoi(rhs.at(i));
+            const auto numL = lhs.at(i);
+            const auto numR = rhs.at(i);
             if (numL != numR) {
                 return numL > numR;
             }
