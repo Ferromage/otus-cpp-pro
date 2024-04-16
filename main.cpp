@@ -4,7 +4,10 @@
 #include <vector>
 #include <list>
 #include <tuple>
-                     
+
+/// <summary>
+/// template function for printing of integral types
+/// </summary>                     
 template<typename T>
 typename std::enable_if<std::is_integral<T>::value, void>::type
 print_ip(T t) {
@@ -23,11 +26,17 @@ print_ip(T t) {
     std::cout << std::endl;
 }
 
+/// <summary>
+/// template function for printing of std::string type
+/// </summary>                     
 template<typename T, typename = typename T::traits_type>
 void print_ip(const T& t) {
     std::cout << t << std::endl;
 }
 
+/// <summary>
+/// template function for printing of std::vector and std::list
+/// </summary>                     
 template<typename T>
 typename std::enable_if<(std::is_same<T, std::vector<typename T::value_type>>::value) || (std::is_same<T, std::list<typename T::value_type>>::value), void>::type
 print_ip(const T& t) {
@@ -41,7 +50,9 @@ print_ip(const T& t) {
 }
 
 
-
+/// <summary>
+/// aux functions for std::tuple
+/// </summary>                     
 template <typename First, typename... T>
 struct all_same_type {
     constexpr static bool value = std::is_same<std::tuple<First, T...>, std::tuple<T..., First>>::value;
@@ -61,6 +72,9 @@ printTuple(std::tuple<Tp...> t, std::ostream& os) {
     printTuple<I + 1, Tp...>(t, os);
 }
 
+/// <summary>
+/// template function for printing of std::tuple
+/// </summary>                     
 template<typename... Args>
 typename std::enable_if<all_same_type<Args...>::value, void>::type
 print_ip(Args... args) {
@@ -72,6 +86,9 @@ print_ip(Args... args) {
     }
 }
 
+/// <summary>
+/// main function
+/// </summary>                     
 int main() {
     print_ip( int8_t{-1} ); // 255
     print_ip( int16_t{0} ); // 0.0
