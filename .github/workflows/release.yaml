@@ -1,4 +1,4 @@
-name: ip_printer
+name: print ip
 
 on:
   push:  
