@@ -1,4 +1,4 @@
-name: IP filter
+name: IP filter 
 
 on:
   push:
