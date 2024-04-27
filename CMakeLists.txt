@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15) 
+cmake_minimum_required(VERSION 3.15)  
 
 set(VERSION_PATCH "1" CACHE INTERNAL "Patch version")
 project(print_ip VERSION 0.0.${VERSION_PATCH})
