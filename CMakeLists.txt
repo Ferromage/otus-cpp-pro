@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 set(VERSION_PATCH "1" CACHE INTERNAL "Patch version")
-project(redactor VERSION 0.0.${VERSION_PATCH})
+project(editor VERSION 0.0.${VERSION_PATCH})
 
 add_executable(editor main.cpp editor.cpp shape.cpp document.cpp view.cpp)
 
