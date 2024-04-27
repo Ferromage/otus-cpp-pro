@@ -36,26 +36,26 @@ jobs:
           asset_name: editor-0.0.${{ github.run_number }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
 
-  # build-documentation:
-  #   runs-on: ubuntu-latest
+  build-documentation:
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #   - uses: actions/checkout@v2
+    steps:
+    - uses: actions/checkout@v2
     
-  #   # Build the HTML documentation
-  #   - name: Doxygen Action
-  #     uses: mattnotmitt/doxygen-action@v1.1.0
-  #     with:
-  #         doxyfile-path: ./Doxyfile
-  #         working-directory: .
+    # Build the HTML documentation
+    - name: Doxygen Action
+      uses: mattnotmitt/doxygen-action@v1.1.0
+      with:
+          doxyfile-path: ./Doxyfile
+          working-directory: .
     
-  #   # Deploy the HTML documentation to GitHub Pages
-  #   - name: GH Pages Deployment
-  #     uses: peaceiris/actions-gh-pages@v3
-  #     with:
-  #       github_token: ${{ secrets.GITHUB_TOKEN }}
-  #       publish_dir: ./doc/html/
-  #       enable_jekyll: false
-  #       allow_empty_commit: false
-  #       force_orphan: true
-  #       publish_branch: gh-pages
+    # Deploy the HTML documentation to GitHub Pages
+    - name: GH Pages Deployment
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./doc/html/
+        enable_jekyll: false
+        allow_empty_commit: false
+        force_orphan: true
+        publish_branch: gh-pages
