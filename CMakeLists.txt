@@ -3,17 +3,17 @@ cmake_minimum_required(VERSION 3.15)
 set(VERSION_PATCH "1" CACHE INTERNAL "Patch version")
 project(redactor VERSION 0.0.${VERSION_PATCH})
 
-add_executable(redactor main.cpp)
+add_executable(editor main.cpp editor.cpp shape.cpp document.cpp view.cpp)
 
-set_target_properties(redactor PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+set_target_properties(editor PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 if (MSVC)
-    target_compile_options(redactor PRIVATE /W4)
+    target_compile_options(editor PRIVATE /W4)
 else ()
-    target_compile_options(redactor PRIVATE -Wall -Wextra -pedantic -Werror)
+    target_compile_options(editor PRIVATE -Wall -Wextra -pedantic -Werror)
 endif()
 
-install(TARGETS redactor RUNTIME DESTINATION bin)
+install(TARGETS editor RUNTIME DESTINATION bin)
 
 set(CPACK_GENERATOR DEB)
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
