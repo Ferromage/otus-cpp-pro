@@ -1,58 +1,43 @@
 cmake_minimum_required(VERSION 3.15)
 
 set(VERSION_PATCH "1" CACHE INTERNAL "Patch version")
-project(helloworld VERSION 0.0.${VERSION_PATCH})
+project(ip_filter VERSION 0.0.${VERSION_PATCH})
 
-option(WITH_BOOST_TEST "Whether to build Boost test" ON)
+option(WITH_TEST "Whether to build test" ON)
 
-configure_file(version.h.in version.h)
+add_executable(ip_filter ip_filter.cpp util.cpp)
+set_target_properties(ip_filter PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
-add_executable(hello main.cpp)
-add_library(hello_lib lib.cpp)
-
-set_target_properties(hello hello_lib PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
-
-target_include_directories(hello_lib PRIVATE ${CMAKE_BINARY_DIR})
-
-target_link_libraries(hello PRIVATE hello_lib)
-
-if(WITH_BOOST_TEST)
-    find_package(Boost COMPONENTS unit_test_framework REQUIRED)
-    add_executable(test_version test_version.cpp)
-
-    set_target_properties(test_version PROPERTIES
-        CXX_STANDARD 14
-        CXX_STANDARD_REQUIRED ON
+if(WITH_TEST)
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/2f83a6e8f8aa56335f8b6a4d72c0a6841dcfa985.zip
     )
+    # For Windows: Prevent overriding the parent project's compiler/linker settings
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
 
-    set_target_properties(test_version PROPERTIES
-        COMPILE_DEFINITIONS BOOST_TEST_DYN_LINK
-        INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR}
-    )
-
-    target_link_libraries(test_version
-        ${Boost_LIBRARIES}
-        helloworld
-    )
+    add_executable(ip_filter_test ip_filter_test.cpp util.cpp)    
+    target_link_libraries(ip_filter_test GTest::gtest_main)
+    set_target_properties(ip_filter_test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 endif()
 
 if (MSVC)
-    target_compile_options(hello PRIVATE /W4)
-    target_compile_options(hello_lib PRIVATE /W4)
+    target_compile_options(ip_filter PRIVATE /W4)    
 
-    if(WITH_BOOST_TEST)
-        target_compile_options(test_version PRIVATE /W4)
+    if(WITH_TEST)
+        target_compile_options(ip_filter_test PRIVATE /W4)
     endif()
 else ()
-    target_compile_options(hello PRIVATE -Wall -Wextra -pedantic -Werror)
-    target_compile_options(hello_lib PRIVATE -Wall -Wextra -pedantic -Werror)    
+    target_compile_options(ip_filter PRIVATE -Wall -Wextra -pedantic -Werror)    
     
-    if(WITH_BOOST_TEST)
-        target_compile_options(test_version PRIVATE -Wall -Wextra -pedantic -Werror)
+    if(WITH_TEST)
+        target_compile_options(ip_filter_test PRIVATE -Wall -Wextra -pedantic -Werror)
     endif()
 endif()
 
-install(TARGETS hello RUNTIME DESTINATION bin)
+install(TARGETS ip_filter RUNTIME DESTINATION bin)
 
 set(CPACK_GENERATOR DEB)
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
@@ -61,7 +46,7 @@ set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
 set(CPACK_PACKAGE_CONTACT example@example.com)
 include(CPack)
 
-if(WITH_BOOST_TEST)
+if(WITH_TEST)
     enable_testing()
-    add_test(test_version test_version)
+    add_test(ip_filter_test ip_filter_test)
 endif()
