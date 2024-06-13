@@ -1,18 +1,21 @@
 cmake_minimum_required(VERSION 3.15)
 
 set(VERSION_PATCH "1" CACHE INTERNAL "Patch version")
-project(boost VERSION 0.0.${VERSION_PATCH})
+project(bayan VERSION 0.0.${VERSION_PATCH})
 
-add_executable(boost main.cpp)
-set_target_properties(boost PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+find_package(Boost REQUIRED)
+
+add_executable(bayan main.cpp)
+target_link_libraries(bayan Boost::program_options)
+set_target_properties(bayan PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 if (MSVC)
-    target_compile_options(boost PRIVATE /W4)
+    target_compile_options(bayan PRIVATE /W4)
 else ()
-    target_compile_options(boost PRIVATE -Wall -Wextra -pedantic -Werror)
+    target_compile_options(bayan PRIVATE -Wall -Wextra -pedantic -Werror)
 endif()
 
-install(TARGETS boost RUNTIME DESTINATION bin)
+install(TARGETS bayan RUNTIME DESTINATION bin)
 
 set(CPACK_GENERATOR DEB)
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
