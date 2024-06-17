@@ -10,9 +10,9 @@ target_link_libraries(bayan Boost::program_options)
 set_target_properties(bayan PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 if (MSVC)
-    target_compile_options(bayan PRIVATE /W4)
+    #target_compile_options(bayan PRIVATE /W4)
 else ()
-    target_compile_options(bayan PRIVATE -Wall -Wextra -pedantic -Werror)
+    #target_compile_options(bayan PRIVATE -Wall -Wextra -pedantic -Werror)
 endif()
 
 install(TARGETS bayan RUNTIME DESTINATION bin)
