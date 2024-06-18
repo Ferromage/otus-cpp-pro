@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 set(VERSION_PATCH "1" CACHE INTERNAL "Patch version")
 project(bayan VERSION 0.0.${VERSION_PATCH})
 
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED program_options)
 
 add_executable(bayan main.cpp)
 target_link_libraries(bayan Boost::program_options)
