@@ -13,15 +13,31 @@
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <map>
+#include <filesystem>
+#include <random>
 
 class CommandParser::CommandParserImpl {
     struct CommandBlock {
+        void clear() {
+            commands.clear();
+            timestamp.reset();
+        }
+
         std::vector<std::string> commands;
         std::optional<std::time_t> timestamp;
     };
 
+    struct Context {
+        CommandBlock cmdBlock_;
+        int braceCnt_ = 0;
+    };
+
 public:
     CommandParserImpl() {
+        std::random_device rd;
+        m_randomGen.seed(rd());
+
         logThread_ = std::thread([this] {
             while (true) {
                 std::unique_lock lock(logMutex_);
@@ -41,7 +57,7 @@ public:
             }
         });
 
-        auto fileWorker = [this] (int index) {
+        auto fileWorker = [this] () {
             while (true) {
                 std::unique_lock lock(fileMutex_);
                 fileCv_.wait(lock, [this] {
@@ -51,13 +67,21 @@ public:
                 while (!fileQueue_.empty()) {
                     const auto& item = fileQueue_.front();
 
-                    std::ofstream file("bulk" + std::to_string(item.timestamp.value_or(0)) + "_" + std::to_string(index) + ".log");
+                    std::string fileName;
+                    do {
+                        const auto index = m_randomGen();
+                        fileName = "bulk" + std::to_string(item.timestamp.value_or(0)) + "_" + std::to_string(index) + ".log";
+                    } while (std::filesystem::exists(fileName));
+
+                    std::ofstream file(fileName);
+                    
                     if (!file.is_open()) {
                         continue;
                     }
-
+                    
                     printBuffer(item.commands, file);
                     fileQueue_.pop();
+                    file.flush();
                 }
             
                 if (isExit_) {
@@ -65,10 +89,9 @@ public:
                 }
             }
         };
-
-        int idx = 0;
+        
         for (auto& thread : fileThread_) {
-            thread = std::thread(fileWorker, idx++);
+            thread = std::thread(fileWorker);
         }
     }
 
@@ -76,65 +99,86 @@ public:
         isExit_ = true;
 
         logCv_.notify_one();
-        logThread_.join();
-
         fileCv_.notify_all();
+        
+        logThread_.join();
         for (auto& thread : fileThread_) {
             thread.join();
         }
     }
 
-    void parse(int blockSize) {
+    void parse(int id, int blockSize, std::string_view data) {
+        auto& context = contexts_.try_emplace(id, Context()).first->second;
         std::string cmd;
-        int braceCnt = 0;
-        CommandBlock block;
-        while (std::getline(std::cin, cmd)) {
+
+        while (getline(data, cmd)) {
             if (cmd == "{") {
-                if (braceCnt == 0) {
-                    disposeCommandBlock(block);
+                if (context.braceCnt_ == 0) {
+                    disposeCommandBlock(context.cmdBlock_);
                 }
-                braceCnt++;
+                context.braceCnt_++;
             } else if (cmd == "}") {
-                if (--braceCnt == 0) {
-                    disposeCommandBlock(block);
+                if (--context.braceCnt_ == 0) {
+                    disposeCommandBlock(context.cmdBlock_);
                 }
             } else {            
-                if (!block.timestamp) {
-                    block.timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+                if (!context.cmdBlock_.timestamp) {
+                    context.cmdBlock_.timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
                 }
-                block.commands.emplace_back(std::move(cmd));
+                context.cmdBlock_.commands.emplace_back(std::move(cmd));
 
-                if (braceCnt == 0 && static_cast<int>(block.commands.size()) == blockSize) {
-                    disposeCommandBlock(block);
+                if (context.braceCnt_ == 0 && static_cast<int>(context.cmdBlock_.commands.size()) == blockSize) {
+                    disposeCommandBlock(context.cmdBlock_);
                 }
             }
         }
+    }
 
-        if (braceCnt == 0) {
-            disposeCommandBlock(block);
+    void stop(int id) {
+        if (auto it = contexts_.find(id); it != contexts_.end()) {
+            if (it->second.braceCnt_ == 0) {
+                disposeCommandBlock(it->second.cmdBlock_);
+            }
+            contexts_.erase(it);
+        }
+    }
+
+    void exit() {
+        while (!contexts_.empty()) {
+            auto it = contexts_.begin();
+            stop(it->first);
         }
     }
 
 private:
-    void disposeCommandBlock(CommandBlock& block) {
-        if (block.commands.empty()) {
+    bool getline(std::string_view& buf, std::string& cmd) {
+        const auto pos = buf.find('\n');
+        if (pos != std::string_view::npos) {
+            cmd = std::string(buf.begin(), std::next(buf.begin(), pos));
+            buf.remove_prefix(pos + 1);
+            return true;
+        }
+        return false;
+    }
+
+    void disposeCommandBlock(CommandBlock& cmdBlock) {
+        if (cmdBlock.commands.empty()) {
             return;
         }
 
         {
             std::unique_lock lock(logMutex_);
-            logQueue_.push(block);
+            logQueue_.push(cmdBlock);
             logCv_.notify_one();
         }
 
         {
             std::unique_lock lock(fileMutex_);
-            fileQueue_.push(block);
+            fileQueue_.push(cmdBlock);
             fileCv_.notify_all();
         }
         
-        block.commands.clear();
-        block.timestamp.reset();
+        cmdBlock.clear();
     }
 
     void printBuffer(const std::vector<std::string>& commands, std::ostream& out) {
@@ -159,6 +203,8 @@ private:
     std::condition_variable logCv_;
     std::condition_variable fileCv_;
     std::atomic<bool> isExit_ = false;
+    std::map<int, Context> contexts_; //id to context
+    std::mt19937 m_randomGen;
 };
 
 
@@ -170,8 +216,20 @@ CommandParser::~CommandParser() {
     
 }
 
-void CommandParser::parse(int blockSize) {
+void CommandParser::parse(int id, int blockSize, std::string_view data) {
     if (impl_) {
-        impl_->parse(blockSize);
+        impl_->parse(id, blockSize, data);
+    }
+}
+
+void CommandParser::stop(int id) {
+    if (impl_) {
+        impl_->stop(id);
+    }
+}
+
+void CommandParser::exit() {
+    if (impl_) {
+        impl_->exit();
     }
 }
