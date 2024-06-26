@@ -3,9 +3,9 @@ cmake_minimum_required(VERSION 3.15)
 set(VERSION_PATCH "1" CACHE INTERNAL "Patch version")
 project(bulk VERSION 0.0.${VERSION_PATCH})
 
-option(WITH_TEST "Whether to build test" ON)
+option(WITH_TEST "Whether to build test" OFF)
 
-add_executable(bulk main.cpp parser.cpp)
+add_executable(bulk main.cpp parser.cpp printer.cpp)
 set_target_properties(bulk PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
 
 if(WITH_TEST)

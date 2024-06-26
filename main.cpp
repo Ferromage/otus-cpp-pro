@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "printer.h"
 
 #include <cstdlib>
 
@@ -8,6 +9,14 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    parseCommands(std::atoi(argv[1]), std::cin, std::cout);
+    CommandParser parser;
+    auto logPrinter = std::make_shared<LogPrinter>();
+    auto filePrinter = std::make_shared<FilePrinter>();
+
+    parser.addListener(logPrinter);
+    parser.addListener(filePrinter);
+
+    parser.parse(std::atoi(argv[1]), std::cin);
+    
     return 0;
 }
