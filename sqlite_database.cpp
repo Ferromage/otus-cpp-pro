@@ -22,8 +22,7 @@ public:
             throw std::runtime_error(errMsg);
         }
         
-        truncate("A");
-        truncate("B");
+        dropTables();
         
         {
             const auto res = executeSQL("CREATE TABLE A (id INT PRIMARY KEY, name VARCHAR(255));", nullptr);
@@ -143,6 +142,11 @@ public:
     }
 
 private:
+    void dropTables() {
+        executeSQL("DROP TABLE A;", nullptr);
+        executeSQL("DROP TABLE B;", nullptr);
+    }
+
     template<typename Callback>
     std::pair<bool, std::string> executeSQL(const std::string& sql, Callback callback) {
         char *errMsg;
