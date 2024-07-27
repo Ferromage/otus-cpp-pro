@@ -73,7 +73,7 @@ public:
             return ERROR_PREFIX + " unknown table\n";
         }
                 
-        const auto res = executeSQL("DROP TABLE " + table + ";", nullptr);
+        const auto res = executeSQL("DELETE FROM " + table + ";", nullptr);
         if (res.first) {
             return SUCCESS_PREFIX + '\n';
         } else {
