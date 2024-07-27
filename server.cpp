@@ -31,7 +31,7 @@ void TcpServer::Session::read() {
             if (callback_) {
                 std::string response;
                 callback_(buffer_, response);
-                socket_.async_write_some(buffer(response, response.size()), [this, self] (boost::system::error_code err, std::size_t length) {});
+                socket_.async_write_some(buffer(response, response.size()), [this, self] ([[maybe_unused]] boost::system::error_code err, [[maybe_unused]] std::size_t length) {});
             }
             read();
         }

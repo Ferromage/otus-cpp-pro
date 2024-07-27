@@ -4,6 +4,10 @@
 #include <iostream>
 #include <sstream>
 #include <memory>
+#include <mutex>
+
+
+#include <sstream>
 
 int main(int argc, char* argv[]) {
     std::locale::global(std::locale(""));
@@ -20,13 +24,15 @@ int main(int argc, char* argv[]) {
     }
 
     try {
+        std::mutex mutex;
         io_context io_context;
         TcpServer server(io_context, port);
-        std::unique_ptr<IDatabase> database = std::make_unique<CustomDatabase>();
+        auto database = getSQLiteDatabase();
         
-        server.start([&database] (std::string_view msg, std::string& response) {
-            response.clear();
+        server.start([&database, &mutex] (std::string_view msg, std::string& response) {
+            std::lock_guard lock(mutex);
 
+            response.clear();
             std::istringstream iss(std::string(msg.begin(), msg.end()));
             std::string cmd;
             iss >> cmd;
