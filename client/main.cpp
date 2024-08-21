@@ -1,4 +1,5 @@
 #include "client_controller.h"
+#include "tcp_client.h"
 #include <iostream>
 
 void printHeader() {
@@ -6,6 +7,19 @@ void printHeader() {
 }
 
 int main() {
+    TcpClient client(1234, [] (std::string_view msg) {
+        std::cout << msg << std::endl;
+    });
+
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        client.write("Test");
+    }
+    return 0;
+
+
+
+
     int arg;
     ClientController clientCtrl;
 
