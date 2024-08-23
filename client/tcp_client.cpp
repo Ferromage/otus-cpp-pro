@@ -2,19 +2,35 @@
 #include <iostream>
 #include <chrono>
 
-TcpClient::TcpClient(int port, DataCallback callback) : callback_(callback), socket_(context_), resolver_(context_), stop_{false}, isConnected_{false} {
-    thread_ = std::thread([this, port] {
+TcpClient::TcpClient(int port) : socket_(context_), resolver_(context_), stop_{false}, isConnected_{false}, port_{port} {
+    
+}
+
+TcpClient::~TcpClient() {
+    if (callback_) {
+        stop_ = true;
+        thread_.join();
+    }
+}
+
+void TcpClient::start(DataCallback callback) {
+    if (callback_) {
+        return; //already started
+    }
+    callback_ = callback;
+
+    thread_ = std::thread([this] {
         boost::asio::ip::address addr;
         addr.from_string("127.0.0.1");
-        boost::asio::ip::tcp::endpoint endpoint(addr, port);
+        boost::asio::ip::tcp::endpoint endpoint(addr, port_);
 
         while (true) {    
-            std::cout << "Connecting..." << std::endl;
-
-            boost::system::error_code ec;
             isConnected_.store(false);
+            //std::cout << "Connecting..." << std::endl;
+            
+            boost::system::error_code ec;
             while (!stop_) {
-                std::cout << "Try to connect..." << std::endl;
+                //std::cout << "Try to connect..." << std::endl;
                 socket_.connect(endpoint, ec);
                 if (!ec) {
                     break;
@@ -27,24 +43,19 @@ TcpClient::TcpClient(int port, DataCallback callback) : callback_(callback), soc
             }
 
             isConnected_.store(true);
-            std::cout << "Connected" << std::endl;
+            //std::cout << "Connected" << std::endl;
 
             read();
             context_.run();
 
-            std::cout << "Disconnected" << std::endl;
+            //std::cout << "Disconnected" << std::endl;
 
             socket_.close();
             context_.reset();
         }
 
-        std::cout << "Exit" << std::endl;
+        //std::cout << "Exit" << std::endl;
     });
-}
-
-TcpClient::~TcpClient() {
-    stop_ = true;
-    thread_.join();
 }
 
 void TcpClient::read() {
@@ -54,13 +65,24 @@ void TcpClient::read() {
             if (callback_) {
                 callback_(buffer_);
             }
-            read();
+            
+            if (!stop_) {
+                read();
+            }
         }
     });
 }
 
-void TcpClient::write(const std::string& message) {
+bool TcpClient::write(const std::string& message, std::string& err) {
     if (isConnected_.load()) {
         socket_.async_write_some(boost::asio::buffer(message, message.size()), [] (const boost::system::error_code& error, std::size_t bytes_transferred) {});
+        err.clear();
+        return true;
     }
+    err = "TCP client is disconnected";
+    return false;
+}
+
+bool TcpClient::isConnected() const {
+    return isConnected_.load();
 }

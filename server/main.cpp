@@ -1,18 +1,103 @@
 #include "tcp_server.h"
+#include "user_controller.h"
 
 #include <string>
 #include <iostream>
+
+namespace {
+    static constexpr char kRegisterCmd[] = "<REGISTER>";
+    static constexpr char kLoginCmd[] = "<LOGIN>";
+    static constexpr char kListCmd[] = "<LIST>";
+    static constexpr char kSuccess[] = "OK";
+    static constexpr char kFail[] = "FAIL";
+
+    std::string buildOkMessage(std::string_view cmd) {
+        return std::string(cmd) + " " + std::string(kSuccess);
+    }
+
+    std::string buildFailMessage(std::string_view cmd, std::string_view errDescription) {
+        return std::string(cmd) + " " + std::string(kFail) + " " + std::string(errDescription);
+    }
+}
 
 int main() {
     static constexpr int PORT = 1234;
 
     try {
         io_context io_context;
-        TcpServer server(io_context, PORT);
+        tcpserver::Server server(io_context, PORT);
+        UserController userCtr;
         
-        server.start([] (std::string_view msg, std::string& response, int id) {
-            response = msg;
+        server.start([&userCtr] (std::string_view msg, std::string& response, std::weak_ptr<tcpserver::Session> session, bool exit, int id) {
             std::cout << "RX: " << msg << std::endl;
+            
+            if (exit) {
+                userCtr.logoutUser(id);
+            } else if (auto pos = msg.find(kRegisterCmd); pos != std::string::npos && pos == 0) {
+                pos += std::size(kRegisterCmd);
+                auto posEnd = msg.find(",", pos);
+                if (posEnd == std::string::npos) {
+                    response = buildFailMessage(kRegisterCmd, "wrong format");
+                    return;
+                }
+
+                const auto name = std::string(msg.substr(pos, posEnd - pos));
+                if (name.empty()) {
+                    response = buildFailMessage(kRegisterCmd, "name is empty");
+                    return;
+                }
+                
+                const auto password = std::string(msg.substr(posEnd + 1));
+                if (password.empty()) {
+                    response = buildFailMessage(kRegisterCmd, "password is empty");
+                    return;
+                }
+
+                const auto res = userCtr.registerUser(id, name, password, session);
+                if (res.first) {
+                    response = buildOkMessage(kRegisterCmd);
+                } else {
+                    response = buildFailMessage(kRegisterCmd, res.second);
+                }
+            } else if (pos = msg.find(kLoginCmd); pos != std::string::npos && pos == 0) {
+                pos += std::size(kLoginCmd);
+                auto posEnd = msg.find(",", pos);
+                if (posEnd == std::string::npos) {
+                    response = buildFailMessage(kLoginCmd, "wrong format");
+                    return;
+                }
+
+                const auto name = std::string(msg.substr(pos, posEnd - pos));
+                if (name.empty()) {
+                    response = buildFailMessage(kLoginCmd, "name is empty");
+                    return;
+                }
+                
+                const auto password = std::string(msg.substr(posEnd + 1));
+                if (password.empty()) {
+                    response = buildFailMessage(kLoginCmd, "password is empty");
+                    return;
+                }
+                
+                const auto res = userCtr.loginUser(id, name, password, session);
+                if (res.first) {
+                    response = buildOkMessage(kLoginCmd);
+                } else {
+                    response = buildFailMessage(kLoginCmd, res.second);
+                }
+            } else if (pos = msg.find(kListCmd); pos != std::string::npos && pos == 0) {
+                std::vector<std::string> users;
+                const auto res = userCtr.listUsers(id, users);
+                if (res.first) {
+                    response = buildOkMessage(kListCmd) + " ";
+                    for (const auto& str : users) {
+                        response += str + ",";
+                    }
+                    response.pop_back();
+                } else {
+                    response = buildFailMessage(kListCmd, res.second);
+                }
+            }
         });
 
         io_context.run();

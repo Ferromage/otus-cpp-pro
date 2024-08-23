@@ -7,30 +7,36 @@
 using namespace boost::asio;
 using namespace boost::asio::ip;
 
-class TcpServer {
-public:
-    using DataCallback = std::function<void(std::string_view data, std::string& response, int id)>;
+namespace tcpserver {
 
-    TcpServer(io_context& iocontext, int port);
+class Session;
+using DataCallback = std::function<void(std::string_view data, std::string& response, std::weak_ptr<Session>, bool exit, int id)>;
+
+class Session : public std::enable_shared_from_this<Session> {
+public:
+    Session(tcp::socket socket, DataCallback callback, int id);
+    ~Session();
+    void read();
+    void write(const std::string& message);
+
+private:
+    static constexpr int BUFFER_SIZE = 4096;
+    tcp::socket socket_;
+    char buffer_[BUFFER_SIZE];
+    DataCallback callback_;
+    const int id_;
+};
+
+class Server {
+public:
+    Server(io_context& iocontext, int port);
     void start(DataCallback callback);        
 
 private:
-    class Session : public std::enable_shared_from_this<Session> {
-    public:
-        Session(tcp::socket socket, DataCallback callback, int id);
-        ~Session();
-        void read();            
-
-    private:
-        static constexpr int BUFFER_SIZE = 4096;
-        tcp::socket socket_;
-        char buffer_[BUFFER_SIZE];
-        DataCallback callback_;
-        const int id_;
-    };
-
     void accept(DataCallback callback);        
 
     tcp::acceptor acceptor_;
-    int clientId_ = 0;
+    int id_ = 0;
 };
+
+} //tcpserver

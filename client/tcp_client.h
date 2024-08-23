@@ -11,10 +11,12 @@ class TcpClient {
 public:
     using DataCallback = std::function<void(std::string_view data)>;
 
-    TcpClient(int port, DataCallback callback = nullptr);
+    TcpClient(int port);
     ~TcpClient();
 
-    void write(const std::string& message);
+    void start(DataCallback callback);
+    bool write(const std::string& message, std::string& err);
+    bool isConnected() const;
 
 private:
     void read();
@@ -27,4 +29,5 @@ private:
     bool stop_;
     char buffer_[8192];
     std::atomic_bool isConnected_;
+    const int port_;
 };

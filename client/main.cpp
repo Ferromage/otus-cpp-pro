@@ -2,26 +2,18 @@
 #include "tcp_client.h"
 #include <iostream>
 
-void printHeader() {
-    std::cout << "================ Messager. Version 0.01\n";
+namespace {
+    static constexpr int TCP_PORT = 1234;
+
+    void printHeader() {
+        std::cout << "================ Messager. Version 0.01\n";
+    }
 }
 
 int main() {
-    TcpClient client(1234, [] (std::string_view msg) {
-        std::cout << msg << std::endl;
-    });
-
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        client.write("Test");
-    }
-    return 0;
-
-
-
-
+    auto tcpClient = std::make_unique<TcpClient>(TCP_PORT);
+    ClientController clientCtrl(std::move(tcpClient));
     int arg;
-    ClientController clientCtrl;
 
     //Page1
     printHeader();
@@ -46,7 +38,7 @@ int main() {
             if (res.first) {
                 break;
             } else {
-                std::cout << "Couldn't " << (arg == 0 ? "register" : "login") << name << " by reason: " << res.second << std::endl;
+                std::cout << "Couldn't" << (arg == 0 ? " register " : " login ") << name << " by reason: " << res.second << std::endl;
             }
         } else {
             std::cout << "Unknown command" << std::endl;
@@ -62,32 +54,42 @@ int main() {
         std::cin >> arg;
 
         if (arg == 0) {
-            const auto users = clientCtrl.listUsers();
-            if (users.empty()) {
-                std::cout << "No available users\n";
-            } else {
-                std::cout << "Available users:\n";
-                int i = 0;
-                for (const auto& user : users) {
-                    std::cout << i++ << ": " << user << "\n";
+            std::vector<std::string> users;
+            const auto res = clientCtrl.listUsers(users);
+            if (res.first) {
+                if (users.empty()) {
+                    std::cout << "No available users\n";
+                } else {
+                    std::cout << "Available users:\n";
+                    int i = 0;
+                    for (const auto& user : users) {
+                        std::cout << i++ << ": " << user << "\n";
+                    }
                 }
+                std::cout.flush();
+            } else {
+                std::cout << "Couldn't list users by reason: " << res.second << std::endl;
             }
-            std::cout.flush();
         } else if (arg == 1) {
             std::cout << "input user number: ";
             std::cout.flush();
             
             std::cin >> arg;
-            const auto users = clientCtrl.listUsers();
-            if (arg >= users.size()) {
-                std::cout << "wrong user number\n";
+            std::vector<std::string> users;
+            const auto res = clientCtrl.listUsers(users);
+            if (res.first) {
+                if (arg >= users.size()) {
+                    std::cout << "wrong user number\n";
+                } else {
+                    const auto history = clientCtrl.loadUserHistory(users[arg]);
+                    for (const auto& msg : history) {
+                        std::cout << msg << "\n";
+                    }
+                    std::cout.flush();
+                    clientCtrl.interactWithUser(users[arg], std::cout);
+                }   
             } else {
-                const auto history = clientCtrl.loadUserHistory(users[arg]);
-                for (const auto& msg : history) {
-                    std::cout << msg << "\n";
-                }
-                std::cout.flush();
-                clientCtrl.interactWithUser(users[arg], std::cout);
+                std::cout << "Couldn't list users by reason: " << res.second << std::endl;
             }
         } else {
             std::cout << "Unknown command" << std::endl;
