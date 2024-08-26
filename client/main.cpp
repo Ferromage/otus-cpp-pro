@@ -18,7 +18,7 @@ int main() {
     //Page1
     printHeader();
     while (true) {
-        std::cout << "Choose command: \n0 - register new user\n1 - login" << std::endl;        
+        std::cout << "Choose command: \n0 - register new user\n1 - login" << std::endl;
         std::cin >> arg;
 
         if (arg == 0 || arg == 1) {
@@ -26,13 +26,15 @@ int main() {
             std::cout.flush();
 
             std::string name;
-            std::cin >> name;
-
+            std::cin >> std::ws;
+            std::getline(std::cin, name);
+            
             std::cout << "input password: ";
             std::cout.flush();
 
             std::string password;
-            std::cin >> password;
+            std::cin >> std::ws;
+            std::getline(std::cin, password);
 
             const auto res = (arg == 0) ? clientCtrl.registerNewUser(name, password) : clientCtrl.login(name, password);
             if (res.first) {
@@ -81,12 +83,20 @@ int main() {
                 if (arg >= users.size()) {
                     std::cout << "wrong user number\n";
                 } else {
-                    const auto history = clientCtrl.loadUserHistory(users[arg]);
-                    for (const auto& msg : history) {
-                        std::cout << msg << "\n";
+                    //TODO: здесь надо открыть еще одно окно для переписки;
+                    //в исходном окне набирать сообщения и после enter очищать экран и отправлять сообщение
+                    
+                    std::vector<ClientController::Message> history;
+                    const auto res = clientCtrl.loadUserHistory(users[arg], history);
+                    if (res.first) {
+                        for (const auto& msg : history) {
+                            std::cout << "<" << msg.first << ">: " << msg.second << "\n"; //TODO выводить в дочернее окно с перепиской
+                        }
+                        std::cout.flush();
+                        clientCtrl.interactWithUser(users[arg], std::cout);
+                    } else {
+                        std::cout << "Couldn't load history by reason: " << res.second << std::endl;
                     }
-                    std::cout.flush();
-                    clientCtrl.interactWithUser(users[arg], std::cout);
                 }   
             } else {
                 std::cout << "Couldn't list users by reason: " << res.second << std::endl;

@@ -76,3 +76,33 @@ std::pair<bool, std::string> UserController::listUsers(int id, std::vector<std::
 
     return {true, ""};
 }
+
+std::tuple<bool, std::string, const std::vector<UserController::Message>&> UserController::loadHistory(int id, const std::string& name) const {
+    std::lock_guard lock(mutex_);
+
+    auto it = nameToInfoTable_.begin();
+    while (it != nameToInfoTable_.end()) {
+        if (it->second.id_.has_value() && it->second.id_ == id) {
+            break;
+        }
+        ++it;
+    }
+
+    if (it == nameToInfoTable_.end() || nameToInfoTable_.count(name) == 0) {
+        return {false, "User(s) is not logined or registered", {}};
+    }
+
+    const auto key = calculateHistoryKey(it->second.name_, name);
+
+    if (auto it = history_.find(key); it != history_.end()) {
+        return {true, "", it->second};
+    }
+    
+    return {true, "", {}};
+}
+
+HistoryKey UserController::calculateHistoryKey(const std::string& user1, const std::string& user2) const {
+    std::vector<std::string> names{user1, user2};
+    std::sort(names.begin(), names.end());
+    return {names[0], names[1]};
+}

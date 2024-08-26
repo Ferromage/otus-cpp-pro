@@ -10,6 +10,7 @@ namespace {
     static constexpr char kListCmd[] = "<LIST>";
     static constexpr char kSuccess[] = "OK";
     static constexpr char kFail[] = "FAIL";
+    static constexpr char kHistoryCmd[] = "<HISTORY>";
 
     std::string buildOkMessage(std::string_view cmd) {
         return std::string(cmd) + " " + std::string(kSuccess);
@@ -29,7 +30,7 @@ int main() {
         UserController userCtr;
         
         server.start([&userCtr] (std::string_view msg, std::string& response, std::weak_ptr<tcpserver::Session> session, bool exit, int id) {
-            std::cout << "RX: " << msg << std::endl;
+            std::cout << msg << std::endl;
             
             if (exit) {
                 userCtr.logoutUser(id);
@@ -96,6 +97,20 @@ int main() {
                     response.pop_back();
                 } else {
                     response = buildFailMessage(kListCmd, res.second);
+                }
+            } else if (pos = msg.find(kHistoryCmd); pos != std::string::npos && pos == 0) {
+                pos += std::size(kHistoryCmd);
+                const auto user = std::string(msg.substr(pos));
+
+                const auto res = userCtr.loadHistory(id, user);
+                if (std::get<0>(res)) {
+                    response = buildOkMessage(kHistoryCmd) + " ";
+                    for (const auto& [user, msg] : std::get<2>(res)) {
+                        response += "<" + user + ">:<" + msg + ">,";
+                    }
+                    response.pop_back();
+                } else {
+                    response = buildFailMessage(kHistoryCmd, std::get<1>(res));
                 }
             }
         });

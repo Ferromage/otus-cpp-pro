@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include <mutex>
+#include <tuple>
 #include <optional>
 #include <unordered_map>
 
@@ -26,16 +27,32 @@ struct UserInfo {
     std::weak_ptr<tcpserver::Session> session_;
 };
 
+
+using HistoryKey = std::pair<std::string, std::string>; //{user1, user2}
+
+template<>
+struct std::hash<HistoryKey> {
+    std::size_t operator()(const HistoryKey& key) const noexcept {
+        return std::hash<std::string>{}(key.first) ^ (std::hash<std::string>{}(key.second) << 1);
+    }
+};
+
 class UserController {
 public:
-    UserController() = default;
+    using Message = std::pair<std::string, std::string>; //{user, message}    
 
+    UserController() = default;
+    
     std::pair<bool, std::string> registerUser(int id, const std::string& name, const std::string& password, std::weak_ptr<tcpserver::Session> session);
     std::pair<bool, std::string> loginUser(int id, const std::string& name, const std::string& password, std::weak_ptr<tcpserver::Session> session);
     std::pair<bool, std::string> listUsers(int id, std::vector<std::string>& users) const;
+    std::tuple<bool, std::string, const std::vector<Message>&> loadHistory(int id, const std::string& name) const;
     void logoutUser(int id);
 
 private:
+    HistoryKey calculateHistoryKey(const std::string& user1, const std::string& user2) const;
+
     std::unordered_map<std::string, UserInfo> nameToInfoTable_;
+    std::unordered_map<HistoryKey, std::vector<Message>> history_;
     mutable std::mutex mutex_;
 };
