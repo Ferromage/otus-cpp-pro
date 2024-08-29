@@ -10,6 +10,7 @@
 class ClientController {
 public:
     using Message = std::pair<std::string, std::string>; //{user, message}
+    using MessageCallback = std::function<void(const std::string& user, const std::string& message)>;
 
     ClientController(std::unique_ptr<TcpClient> tcpClient);
 
@@ -19,7 +20,9 @@ public:
     std::pair<bool, std::string> loadUserHistory(const std::string& name, std::vector<Message>& history); //возвращает историю переписки с указанным пользователем
     const std::string& localUser() const; //текущий юзер, успешно зареганный через registerNewUser или вощедший по логину через login
     const std::string& remoteUser() const; //текущий удаленный юзер
-    void interactWithUser(const std::string& name, std::ostream& oss); //переписка с юзером через сервер
+    void startInteractWithUser(const std::string& name, std::function<void(const std::string& user, const std::string& message)> callback);
+    void stopInteractWithUser(const std::string& name);
+    std::pair<bool, std::string> sendMessage(const std::string& name, const std::string& message);
 
 private:
     std::string localUser_;
@@ -32,4 +35,5 @@ private:
     std::string serverErrDescription_;
     std::vector<std::string> users_;
     std::vector<Message> history_;
+    std::map<std::string, MessageCallback> msgCallbacks_; //user name to callback
 };

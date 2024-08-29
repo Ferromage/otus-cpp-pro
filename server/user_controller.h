@@ -48,6 +48,7 @@ public:
     std::pair<bool, std::string> listUsers(int id, std::vector<std::string>& users) const;
     std::tuple<bool, std::string, const std::vector<Message>&> loadHistory(int id, const std::string& name) const;
     void logoutUser(int id);
+    std::pair<bool, std::string> sendMessage(int id, const Message& message, std::function<void(const Message& message, std::weak_ptr<tcpserver::Session>& receiverSession)> callback);
 
 private:
     HistoryKey calculateHistoryKey(const std::string& user1, const std::string& user2) const;

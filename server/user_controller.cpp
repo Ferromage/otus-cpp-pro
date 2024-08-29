@@ -78,6 +78,8 @@ std::pair<bool, std::string> UserController::listUsers(int id, std::vector<std::
 }
 
 std::tuple<bool, std::string, const std::vector<UserController::Message>&> UserController::loadHistory(int id, const std::string& name) const {
+    static const std::vector<UserController::Message> empty;
+
     std::lock_guard lock(mutex_);
 
     auto it = nameToInfoTable_.begin();
@@ -89,7 +91,7 @@ std::tuple<bool, std::string, const std::vector<UserController::Message>&> UserC
     }
 
     if (it == nameToInfoTable_.end() || nameToInfoTable_.count(name) == 0) {
-        return {false, "User(s) is not logined or registered", {}};
+        return {false, "User(s) is not logined or registered", empty};
     }
 
     const auto key = calculateHistoryKey(it->second.name_, name);
@@ -97,12 +99,47 @@ std::tuple<bool, std::string, const std::vector<UserController::Message>&> UserC
     if (auto it = history_.find(key); it != history_.end()) {
         return {true, "", it->second};
     }
-    
-    return {true, "", {}};
+     
+    return {true, "", empty};
 }
 
 HistoryKey UserController::calculateHistoryKey(const std::string& user1, const std::string& user2) const {
     std::vector<std::string> names{user1, user2};
     std::sort(names.begin(), names.end());
     return {names[0], names[1]};
+}
+
+std::pair<bool, std::string> UserController::sendMessage(int id, const UserController::Message& message, std::function<void(const Message& message, std::weak_ptr<tcpserver::Session>& receiverSession)> callback) {
+    std::lock_guard lock(mutex_);
+
+    auto itTx = nameToInfoTable_.begin();
+    while (itTx != nameToInfoTable_.end()) {
+        if (itTx->second.id_.has_value() && itTx->second.id_ == id) {
+            break;
+        }
+        ++itTx;
+    }
+    
+    if (itTx == nameToInfoTable_.end()) {
+        return {false, "User-sender is not logined or registered"};
+    }
+    
+    auto itRx = nameToInfoTable_.find(message.first);
+    if (itRx == nameToInfoTable_.end()) {
+        return {false, "User-receiver is not registered"};
+    }
+
+    if (itTx->second.name_ == message.first) {
+        return {false, "Sender cannot be receiver"};
+    }
+
+    const auto key = calculateHistoryKey(itTx->second.name_, itRx->second.name_);
+    const auto msgPrepared = std::make_pair(itTx->second.name_, message.second);
+    history_[key].emplace_back(msgPrepared);
+
+    if (callback) {
+        callback(msgPrepared, itRx->second.session_);
+    }
+
+    return {true, ""};
 }

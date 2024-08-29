@@ -1,6 +1,9 @@
 #include "client_controller.h"
 #include "tcp_client.h"
 #include <iostream>
+#include <fstream>
+#include <boost/process/child.hpp>
+#include <boost/process/io.hpp>
 
 namespace {
     static constexpr int TCP_PORT = 1234;
@@ -8,9 +11,28 @@ namespace {
     void printHeader() {
         std::cout << "================ Messager. Version 0.01\n";
     }
+
+    void clearScreen() {
+        system("clear");   
+    }
+
+    std::string deleteWhitespaces(const std::string& str) {
+        std::string res;
+        std::transform(str.begin(), str.end(), std::back_inserter(res), [] (char c) {
+            if (std::isspace(c)) {
+                c = '_';
+            }
+            return c;
+        });
+        return res;
+    }
+
+    void printMessage(const std::string& user, const std::string& message, std::ostream& out) {
+        out << "<" << user << ">: " << message << "\n";
+    }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     auto tcpClient = std::make_unique<TcpClient>(TCP_PORT);
     ClientController clientCtrl(std::move(tcpClient));
     int arg;
@@ -48,7 +70,7 @@ int main() {
     }
 
     //Page2
-    system("clear");
+    clearScreen();
     printHeader();
     std::cout << "Hi, " << clientCtrl.localUser() << "!\n";
     while (true) {
@@ -83,17 +105,41 @@ int main() {
                 if (arg >= users.size()) {
                     std::cout << "wrong user number\n";
                 } else {
-                    //TODO: здесь надо открыть еще одно окно для переписки;
-                    //в исходном окне набирать сообщения и после enter очищать экран и отправлять сообщение
-                    
                     std::vector<ClientController::Message> history;
                     const auto res = clientCtrl.loadUserHistory(users[arg], history);
                     if (res.first) {
+                        auto file = "/tmp/" + deleteWhitespaces(clientCtrl.localUser());
+                        std::ofstream messageWindow(file);
+                        boost::process::child c("xterm -hold -e tail -f " + file);
+                        
                         for (const auto& msg : history) {
-                            std::cout << "<" << msg.first << ">: " << msg.second << "\n"; //TODO выводить в дочернее окно с перепиской
+                            printMessage(msg.first, msg.second, messageWindow);
                         }
-                        std::cout.flush();
-                        clientCtrl.interactWithUser(users[arg], std::cout);
+                        messageWindow.flush();
+
+                        clientCtrl.startInteractWithUser(users[arg], [&messageWindow] (const std::string& user, const std::string& message) {
+                            printMessage(user, message, messageWindow);
+                            messageWindow.flush();
+                        });
+
+                        std::string message;
+                        while (true) { //TODO сделать выход из цикла по кнопке Esc
+                            clearScreen();
+
+                            std::cout << "You (" << clientCtrl.localUser() << ") ---> " << users[arg] << "\n" << "<your message>: ";
+                            std::cout.flush();
+                            
+                            std::cin >> std::ws;
+                            std::getline(std::cin, message);
+
+                            clientCtrl.sendMessage(users[arg], message);
+                        }
+                        c.terminate();
+                        clientCtrl.stopInteractWithUser(users[arg]);
+
+                        clearScreen();
+                        printHeader();
+                        std::cout << "Hi, " << clientCtrl.localUser() << "!\n";
                     } else {
                         std::cout << "Couldn't load history by reason: " << res.second << std::endl;
                     }

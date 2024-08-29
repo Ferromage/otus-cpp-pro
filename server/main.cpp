@@ -11,6 +11,8 @@ namespace {
     static constexpr char kSuccess[] = "OK";
     static constexpr char kFail[] = "FAIL";
     static constexpr char kHistoryCmd[] = "<HISTORY>";
+    static constexpr char kMessageToCmd[] = "<MESSAGE_TO>";
+    static constexpr char kMessageFromCmd[] = "<MESSAGE_FROM>";
 
     std::string buildOkMessage(std::string_view cmd) {
         return std::string(cmd) + " " + std::string(kSuccess);
@@ -102,7 +104,7 @@ int main() {
                 pos += std::size(kHistoryCmd);
                 const auto user = std::string(msg.substr(pos));
 
-                const auto res = userCtr.loadHistory(id, user);
+                const auto& res = userCtr.loadHistory(id, user);
                 if (std::get<0>(res)) {
                     response = buildOkMessage(kHistoryCmd) + " ";
                     for (const auto& [user, msg] : std::get<2>(res)) {
@@ -112,6 +114,47 @@ int main() {
                 } else {
                     response = buildFailMessage(kHistoryCmd, std::get<1>(res));
                 }
+            } else if (pos = msg.find(kMessageToCmd); pos != std::string::npos && pos == 0) {
+                do {
+                    pos += std::size(kMessageToCmd);
+                    if (msg[pos] != '<') {
+                        break;
+                    }
+
+                    auto posEnd = pos + 1;
+                    pos = msg.find(">:<", posEnd);
+                    if (pos == std::string::npos) {
+                        break;
+                    }
+                    
+                    UserController::Message message;
+                    message.first = msg.substr(posEnd, pos - posEnd);
+
+                    posEnd = pos + 3;
+                    pos = msg.find(">", posEnd);
+                    if (pos == std::string::npos) {
+                        break;
+                    }
+
+                    message.second = msg.substr(posEnd, pos - posEnd);
+
+                    const auto res = userCtr.sendMessage(id, message, [] (const UserController::Message& message, std::weak_ptr<tcpserver::Session>& receiverSession) {
+                        auto lock = receiverSession.lock();
+                        if (lock) {
+                            const auto msg = std::string(kMessageFromCmd) + " <" + message.first + ">:<" + message.second + ">";
+                            lock->write(msg);
+                        }
+                    });
+                    if (res.first) {
+                        response = buildOkMessage(kMessageToCmd) + " ";
+                        response += "<" + message.first + ">:<" + message.second + ">";
+                    } else {
+                        response = buildFailMessage(kMessageToCmd, res.second);
+                    }
+                    return;
+                } while (false);
+
+                response = buildFailMessage(kMessageToCmd, "wrong format");
             }
         });
 

@@ -53,5 +53,8 @@ void Session::read() {
 }
 
 void Session::write(const std::string& message) {
-
+    auto self(shared_from_this());
+    if (!message.empty()) {
+        socket_.async_write_some(buffer(message, message.size()), [this, self] ([[maybe_unused]] boost::system::error_code err, [[maybe_unused]] std::size_t length) {});
+    }
 }
