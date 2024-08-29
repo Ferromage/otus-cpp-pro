@@ -1,5 +1,6 @@
 #include "client_controller.h"
 #include <iostream>
+#include <algorithm>
 
 namespace {
     static constexpr int kTimeoutInSeconds = 3;
@@ -14,6 +15,14 @@ namespace {
     static constexpr char kFail[] = "FAIL";
     static constexpr char kServerNotAnswer[] = "server didn't respond";
     static constexpr char kTcpIsNotInit[] = "TCP client is not initialized";
+    static constexpr char kUsernameIsInvalid[] = "Username must not contain symbols '<', '>', ',', ':'";
+    static constexpr char kPasswordIsInvalid[] = "Password must not contain symbols '<', '>', ',', ':'";
+
+    bool isUserStringValid(const std::string& str) {
+        return std::find_if(str.begin(), str.end(), [] (char sym) {
+            return sym == '<' || sym == '>' || sym == ',' || sym == ':';
+        }) == str.end();
+    }
 }
 
 ClientController::ClientController(std::unique_ptr<TcpClient> tcpClient) : tcpClient_(std::move(tcpClient)) {
@@ -129,6 +138,13 @@ ClientController::ClientController(std::unique_ptr<TcpClient> tcpClient) : tcpCl
 }
 
 std::pair<bool, std::string> ClientController::registerNewUser(const std::string& name, const std::string& password) {
+    if (!isUserStringValid(name)) {
+        return {false, kUsernameIsInvalid};
+    }
+    if (!isUserStringValid(password)) {
+        return {false, kPasswordIsInvalid};
+    }
+
     if (tcpClient_) {
         std::unique_lock lock(mutex_);
         
@@ -154,6 +170,13 @@ std::pair<bool, std::string> ClientController::registerNewUser(const std::string
 }
 
 std::pair<bool, std::string> ClientController::login(const std::string& name, const std::string& password) {
+    if (!isUserStringValid(name)) {
+        return {false, kUsernameIsInvalid};
+    }
+    if (!isUserStringValid(password)) {
+        return {false, kPasswordIsInvalid};
+    }
+
     if (tcpClient_) {
         std::unique_lock lock(mutex_);
         
