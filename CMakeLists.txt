@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.15)
 set(VERSION_PATCH "1" CACHE INTERNAL "Patch version")
 project(messager VERSION 0.0.${VERSION_PATCH})
 
+configure_file(version.h.in version.h)
+
 add_subdirectory(client)
 add_subdirectory(server)
 

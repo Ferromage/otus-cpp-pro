@@ -1,5 +1,6 @@
 #include "client_controller.h"
 #include "tcp_client.h"
+#include "version.h"
 #include <iostream>
 #include <fstream>
 #include <boost/process/child.hpp>
@@ -9,7 +10,7 @@ namespace {
     static constexpr int TCP_PORT = 1234;
 
     void printHeader() {
-        std::cout << "================ Messager. Version 0.01\n";
+        std::cout << "================ Messager. Version " << PROJECT_VERSION << '\n';
     }
 
     void clearScreen() {
