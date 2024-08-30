@@ -5,6 +5,7 @@
 #include <fstream>
 #include <boost/process/child.hpp>
 #include <boost/process/io.hpp>
+#include <termios.h>
 
 namespace {
     static constexpr int TCP_PORT = 1234;
@@ -30,6 +31,28 @@ namespace {
 
     void printMessage(const std::string& user, const std::string& message, std::ostream& out) {
         out << "<" << user << ">: " << message << "\n";
+    }
+
+    std::string getStringFromInput(bool &isEscPressed) {
+        constexpr int ESC = 27;
+
+        //make terminal unbuffered
+        struct termios term;
+        tcgetattr(0, &term);
+        term.c_lflag &= ~ICANON;
+        tcsetattr(0, TCSANOW, &term);
+
+        int c;
+        std::string buf;
+        while ((c = std::cin.get()) != ESC && c != '\n') {
+            buf.push_back(c);
+        }
+        isEscPressed = c == ESC;
+
+        term.c_lflag |= ICANON;
+        tcsetattr(0, TCSANOW, &term);
+
+        return buf;
     }
 }
 
@@ -111,7 +134,7 @@ int main(int argc, char *argv[]) {
                     if (res.first) {
                         auto file = "/tmp/" + deleteWhitespaces(clientCtrl.localUser());
                         std::ofstream messageWindow(file);
-                        boost::process::child c("xterm -hold -e tail -f " + file);
+                        boost::process::child childProc("xterm -hold -e tail -f " + file);
                         
                         for (const auto& msg : history) {
                             printMessage(msg.first, msg.second, messageWindow);
@@ -122,20 +145,21 @@ int main(int argc, char *argv[]) {
                             printMessage(user, message, messageWindow);
                             messageWindow.flush();
                         });
-
-                        std::string message;
-                        while (true) { //TODO сделать выход из цикла по кнопке Esc
+                                                
+                        while (true) {
                             clearScreen();
-
                             std::cout << "You (" << clientCtrl.localUser() << ") ---> " << users[arg] << "\n" << "<your message>: ";
                             std::cout.flush();
                             
-                            std::cin >> std::ws;
-                            std::getline(std::cin, message);
+                            bool isEsc = false;
+                            const auto message = getStringFromInput(isEsc);
 
+                            if (isEsc) {
+                                break;
+                            }
                             clientCtrl.sendMessage(users[arg], message);
                         }
-                        c.terminate();
+                        childProc.terminate();
                         clientCtrl.stopInteractWithUser(users[arg]);
 
                         clearScreen();

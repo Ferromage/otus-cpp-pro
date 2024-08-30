@@ -17,6 +17,7 @@ namespace {
     static constexpr char kTcpIsNotInit[] = "TCP client is not initialized";
     static constexpr char kUsernameIsInvalid[] = "Username must not contain symbols '<', '>', ',', ':'";
     static constexpr char kPasswordIsInvalid[] = "Password must not contain symbols '<', '>', ',', ':'";
+    static constexpr char kMessageIsEmpty[] = "Message is empty";
 
     bool isUserStringValid(const std::string& str) {
         return std::find_if(str.begin(), str.end(), [] (char sym) {
@@ -274,6 +275,10 @@ void ClientController::stopInteractWithUser(const std::string& name) {
 }
 
 std::pair<bool, std::string> ClientController::sendMessage(const std::string& name, const std::string& message) {
+    if (message.empty()) {
+        return {false, kMessageIsEmpty};
+    }
+
     if (tcpClient_) {
         std::unique_lock lock(mutex_);
         
