@@ -59,16 +59,17 @@ namespace {
 int main(int argc, char *argv[]) {
     auto tcpClient = std::make_unique<TcpClient>(TCP_PORT);
     ClientController clientCtrl(std::move(tcpClient));
-    int arg;
+    std::string arg;
 
     //Page1
     printHeader();
     while (true) {
         std::cout << "Choose command: \n0 - register new user\n1 - login" << std::endl;
-        std::cin >> arg;
+        std::cin >> std::ws;
+        std::getline(std::cin, arg);
 
-        if (arg == 0 || arg == 1) {
-            std::cout << "--- " << (arg == 0 ? "Registering a new user:" : "Login existing user:") << "\ninput name: ";
+        if (arg == "0" || arg == "1") {
+            std::cout << "--- " << (arg == "0" ? "Registering a new user:" : "Login existing user:") << "\ninput name: ";
             std::cout.flush();
 
             std::string name;
@@ -82,11 +83,11 @@ int main(int argc, char *argv[]) {
             std::cin >> std::ws;
             std::getline(std::cin, password);
 
-            const auto res = (arg == 0) ? clientCtrl.registerNewUser(name, password) : clientCtrl.login(name, password);
+            const auto res = (arg == "0") ? clientCtrl.registerNewUser(name, password) : clientCtrl.login(name, password);
             if (res.first) {
                 break;
             } else {
-                std::cout << "Couldn't" << (arg == 0 ? " register " : " login ") << name << " by reason: " << res.second << std::endl;
+                std::cout << "Couldn't" << (arg == "0" ? " register " : " login ") << name << " by reason: " << res.second << std::endl;
             }
         } else {
             std::cout << "Unknown command" << std::endl;
@@ -99,9 +100,10 @@ int main(int argc, char *argv[]) {
     std::cout << "Hi, " << clientCtrl.localUser() << "!\n";
     while (true) {
         std::cout << "Choose command: \n0 - list all users\n1 - select user" << std::endl;        
-        std::cin >> arg;
+        std::cin >> std::ws;
+        std::getline(std::cin, arg);
 
-        if (arg == 0) {
+        if (arg == "0") {
             std::vector<std::string> users;
             const auto res = clientCtrl.listUsers(users);
             if (res.first) {
@@ -118,57 +120,63 @@ int main(int argc, char *argv[]) {
             } else {
                 std::cout << "Couldn't list users by reason: " << res.second << std::endl;
             }
-        } else if (arg == 1) {
+        } else if (arg == "1") {
             std::cout << "input user number: ";
             std::cout.flush();
             
-            std::cin >> arg;
+            std::cin >> std::ws;
+            std::getline(std::cin, arg);
             std::vector<std::string> users;
             const auto res = clientCtrl.listUsers(users);
             if (res.first) {
-                if (arg >= users.size()) {
-                    std::cout << "wrong user number\n";
-                } else {
-                    std::vector<ClientController::Message> history;
-                    const auto res = clientCtrl.loadUserHistory(users[arg], history);
-                    if (res.first) {
-                        auto file = "/tmp/" + deleteWhitespaces(clientCtrl.localUser());
-                        std::ofstream messageWindow(file);
-                        boost::process::child childProc("xterm -hold -e tail -f " + file);
-                        
-                        for (const auto& msg : history) {
-                            printMessage(msg.first, msg.second, messageWindow);
-                        }
-                        messageWindow.flush();
-
-                        clientCtrl.startInteractWithUser(users[arg], [&messageWindow] (const std::string& user, const std::string& message) {
-                            printMessage(user, message, messageWindow);
-                            messageWindow.flush();
-                        });
-                                                
-                        while (true) {
-                            clearScreen();
-                            std::cout << "You (" << clientCtrl.localUser() << ") ---> " << users[arg] << "\n" << "<your message>: ";
-                            std::cout.flush();
-                            
-                            bool isEsc = false;
-                            const auto message = getStringFromInput(isEsc);
-
-                            if (isEsc) {
-                                break;
-                            }
-                            clientCtrl.sendMessage(users[arg], message);
-                        }
-                        childProc.terminate();
-                        clientCtrl.stopInteractWithUser(users[arg]);
-
-                        clearScreen();
-                        printHeader();
-                        std::cout << "Hi, " << clientCtrl.localUser() << "!\n";
+                try {
+                    const auto num = std::stoi(arg);
+                    if (num >= users.size()) {
+                        std::cout << "wrong user number\n";
                     } else {
-                        std::cout << "Couldn't load history by reason: " << res.second << std::endl;
-                    }
-                }   
+                        std::vector<ClientController::Message> history;
+                        const auto res = clientCtrl.loadUserHistory(users[num], history);
+                        if (res.first) {
+                            auto file = "/tmp/" + deleteWhitespaces(clientCtrl.localUser());
+                            std::ofstream messageWindow(file);
+                            boost::process::child childProc("xterm -hold -e tail -f " + file);
+                            
+                            for (const auto& msg : history) {
+                                printMessage(msg.first, msg.second, messageWindow);
+                            }
+                            messageWindow.flush();
+
+                            clientCtrl.startInteractWithUser(users[num], [&messageWindow] (const std::string& user, const std::string& message) {
+                                printMessage(user, message, messageWindow);
+                                messageWindow.flush();
+                            });
+                                                    
+                            while (true) {
+                                clearScreen();
+                                std::cout << "You (" << clientCtrl.localUser() << ") ---> " << users[num] << "\n" << "<your message>: ";
+                                std::cout.flush();
+                                
+                                bool isEsc = false;
+                                const auto message = getStringFromInput(isEsc);
+
+                                if (isEsc) {
+                                    break;
+                                }
+                                clientCtrl.sendMessage(users[num], message);
+                            }
+                            childProc.terminate();
+                            clientCtrl.stopInteractWithUser(users[num]);
+
+                            clearScreen();
+                            printHeader();
+                            std::cout << "Hi, " << clientCtrl.localUser() << "!\n";
+                        } else {
+                            std::cout << "Couldn't load history by reason: " << res.second << std::endl;
+                        }
+                    }   
+                } catch (...) {
+                    std::cout << "wrong user number\n";
+                }
             } else {
                 std::cout << "Couldn't list users by reason: " << res.second << std::endl;
             }
